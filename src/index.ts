@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { Client, Events, Collection, GatewayIntentBits } from "discord.js";
+import { 
+  Client, 
+  Events, 
+  Collection, 
+  GatewayIntentBits,
+  CommandInteraction,
+  MessageFlags
+} from "discord.js";
+import { deployCommands } from "./deploy"
 import { loadCommands } from "./utils/load-commands"
 import chalk from "chalk";
 
@@ -19,4 +27,29 @@ client.once(Events.ClientReady, (readyClient: Client<true>) => {
   );
 });
 
+client.on(Events.InteractionCreate, async (interaction: CommandInteraction) => {
+  if (!interaction.isChatInputCommand()) return;
+  
+  const command = interaction.client.commands.get(interaction.commandName);
+  
+  if (!command) {
+    console.error(
+      chalk.red.bold(`[-] O comando ${interaction.commandName} não foi encontrado.`)
+    );
+    return;
+  }
+  
+  try {
+    await command.execute(interaction);
+  } catch (err) {
+    console.error(err);
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: "Houve um erro ao executar o comando.", flags: MessageFlags.Ephemeral });
+    } else {
+      await interaction.reply({ content: "Houve um erro ao executar o comando.", flags: MessageFlags.Ephemeral });
+    }
+  }
+});
+
+deployCommands();
 client.login(token);
